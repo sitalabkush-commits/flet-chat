@@ -16,18 +16,7 @@ TEXT_GRAY = "#8A8A8A"
 OFFLINE_GRAY = "#6B6B6B"
 ERROR_RED = "#FF5252"
 
-INTEREST_OPTIONS = ["Male Friend", "Female Friend", "Study Partner", "Anyone"]
-
-MALE_NAMES = ["Arjun", "Rahul", "Aditya", "Sourav", "Rohan", "Debojit"]
-FEMALE_NAMES = ["Riya", "Sneha", "Ananya", "Priya", "Moumita", "Shreya"]
-
-
-def pick_partner_name(interest: str) -> str:
-    if interest == "Male Friend":
-        return random.choice(MALE_NAMES)
-    if interest == "Female Friend":
-        return random.choice(FEMALE_NAMES)
-    return random.choice(MALE_NAMES + FEMALE_NAMES)
+PARTNER_NAMES = ["Riya", "Arjun", "Sneha", "Rahul", "Ananya", "Aditya", "Priya", "Sourav"]
 
 
 def main(page: ft.Page):
@@ -39,131 +28,120 @@ def main(page: ft.Page):
     page.window_width = 400
     page.window_height = 700
 
-    # User profile (Step 1-এ ভরা হবে)
+    # Shared state
     state = {
         "name": "",
-        "location": "",
         "age": "",
-        "education": "",
-        "interest": "",
-        "partner": "",
+        "gender": "",
+        "partner": random.choice(PARTNER_NAMES),
     }
 
-    # Root container: screen বদলাতে শুধু content বদলাবো
+    # Root container — screen বদলাতে শুধু এর content বদলাবো
     root = ft.Container(expand=True, bgcolor=BG_COLOR)
 
     # ------------------------------------------------------------------
-    # SCREEN 1: Profile form
+    # SCREEN 1: User info
     # ------------------------------------------------------------------
-    def show_form_screen():
-        def make_field(label, value="", number=False):
-            return ft.TextField(
-                label=label,
-                value=value,
-                bgcolor="#1A1A1A",
-                border_color="#333333",
-                focused_border_color=ACCENT_GREEN,
-                color=TEXT_WHITE,
-                border_radius=15,
-                keyboard_type=ft.KeyboardType.NUMBER if number else ft.KeyboardType.TEXT,
-            )
+    def show_info_screen():
+        name_field = ft.TextField(
+            label="Your name",
+            bgcolor="#1A1A1A",
+            border_color="#333333",
+            focused_border_color=ACCENT_GREEN,
+            color=TEXT_WHITE,
+            border_radius=15,
+            value=state["name"],
+        )
 
-        name_field = make_field("Name", state["name"])
-        location_field = make_field("Location", state["location"])
-        age_field = make_field("Age", state["age"], number=True)
-        education_field = make_field("Education / Study Details", state["education"])
+        age_field = ft.TextField(
+            label="Your age",
+            bgcolor="#1A1A1A",
+            border_color="#333333",
+            focused_border_color=ACCENT_GREEN,
+            color=TEXT_WHITE,
+            border_radius=15,
+            keyboard_type=ft.KeyboardType.NUMBER,
+            value=state["age"],
+        )
 
         error_text = ft.Text("", color=ERROR_RED, size=13)
 
-        # Interest selection (Dropdown-এর বদলে chip, Flet 1.0-এ নিরাপদ)
-        interest_chips = []
+        gender_options = ["Male", "Female", "Other"]
+        gender_chips = []
 
         def style_chips():
-            for chip in interest_chips:
-                selected = chip.data == state["interest"]
+            for chip in gender_chips:
+                selected = chip.data == state["gender"]
                 chip.bgcolor = ACCENT_GREEN if selected else BUBBLE_GRAY
                 chip.content.color = "#000000" if selected else TEXT_WHITE
 
-        def select_interest(e):
-            state["interest"] = e.control.data
+        def select_gender(e):
+            state["gender"] = e.control.data
             style_chips()
             page.update()
 
-        for option in INTEREST_OPTIONS:
-            interest_chips.append(
+        for g in gender_options:
+            gender_chips.append(
                 ft.Container(
-                    content=ft.Text(option, color=TEXT_WHITE, size=14),
-                    data=option,
+                    content=ft.Text(g, color=TEXT_WHITE, size=15),
+                    data=g,
                     bgcolor=BUBBLE_GRAY,
-                    padding=ft.padding.symmetric(horizontal=16, vertical=10),
+                    padding=ft.padding.symmetric(horizontal=20, vertical=10),
                     border_radius=20,
-                    on_click=select_interest,
+                    on_click=select_gender,
                 )
             )
         style_chips()
 
-        async def on_submit(e):
+        async def on_start(e):
             name = (name_field.value or "").strip()
-            location = (location_field.value or "").strip()
             age_raw = (age_field.value or "").strip()
-            education = (education_field.value or "").strip()
 
             if not name:
                 error_text.value = "নাম দাও"
-            elif not location:
-                error_text.value = "Location দাও"
-            elif not age_raw.isdigit() or not (18 <= int(age_raw) <= 99):
+                page.update()
+                return
+            if not age_raw.isdigit() or not (18 <= int(age_raw) <= 99):
                 error_text.value = "সঠিক বয়স দাও (18+)"
-            elif not education:
-                error_text.value = "Education / Study details দাও"
-            elif not state["interest"]:
-                error_text.value = "কাকে খুঁজছ সেটা select করো"
-            else:
-                error_text.value = ""
-
-            if error_text.value:
+                page.update()
+                return
+            if not state["gender"]:
+                error_text.value = "Gender select করো"
                 page.update()
                 return
 
             state["name"] = name
-            state["location"] = location
             state["age"] = age_raw
-            state["education"] = education
-            state["partner"] = pick_partner_name(state["interest"])
+            state["partner"] = random.choice(PARTNER_NAMES)
             await show_search_screen()
 
-        submit_button = ft.Container(
+        start_button = ft.Container(
             content=ft.Text(
-                "Generate Profile & Start Chat",
-                color="#000000",
-                size=16,
-                weight=ft.FontWeight.BOLD,
+                "Start", color="#000000", size=17, weight=ft.FontWeight.BOLD,
                 text_align=ft.TextAlign.CENTER,
             ),
             bgcolor=ACCENT_GREEN,
             padding=ft.padding.symmetric(vertical=14),
             border_radius=25,
             alignment=ft.Alignment(0, 0),
-            on_click=on_submit,
+            on_click=on_start,
         )
 
         root.content = ft.Container(
-            padding=ft.padding.all(22),
+            padding=ft.padding.all(25),
             content=ft.Column(
                 [
-                    ft.Icon(ft.Icons.SMART_TOY, color=ACCENT_GREEN, size=56),
+                    ft.Icon(ft.Icons.SMART_TOY, color=ACCENT_GREEN, size=60),
                     ft.Text("Welcome", size=28, weight=ft.FontWeight.BOLD, color=TEXT_WHITE),
-                    ft.Text("তোমার তথ্য দাও, তারপর কাউকে খুঁজে দেব", size=14, color=TEXT_GRAY),
-                    ft.Container(height=10),
+                    ft.Text("কয়েকটা তথ্য দাও, তারপর কাউকে খুঁজে দেব", size=14, color=TEXT_GRAY),
+                    ft.Container(height=15),
                     name_field,
-                    location_field,
                     age_field,
-                    education_field,
-                    ft.Text("Looking for", size=14, color=TEXT_GRAY),
-                    ft.Row(interest_chips, spacing=10, run_spacing=10, wrap=True),
+                    ft.Text("Gender", size=14, color=TEXT_GRAY),
+                    ft.Row(gender_chips, spacing=10, wrap=True),
                     error_text,
-                    submit_button,
-                    ft.Container(height=20),
+                    ft.Container(height=5),
+                    start_button,
                 ],
                 spacing=12,
                 scroll=ft.ScrollMode.AUTO,
@@ -197,9 +175,10 @@ def main(page: ft.Page):
         )
         page.update()
 
+        # Fake search messages
         steps = [
-            f"Searching for a {state['interest']}...",
-            f"Looking for people near {state['location']}...",
+            "Searching for someone nearby...",
+            "Looking for people online...",
             "Matching interests...",
             "Found someone! Connecting...",
         ]
@@ -221,15 +200,13 @@ def main(page: ft.Page):
             auto_scroll=True,
         )
 
-        # Online status
+        # Online status widgets
         status_dot = ft.Container(
-            width=12,
-            height=12,
+            width=12, height=12,
             bgcolor=ACCENT_GREEN,
             border_radius=6,
             border=ft.border.all(2, BG_COLOR),
-            right=0,
-            bottom=0,
+            right=0, bottom=0,
         )
         status_label = ft.Text("Online", size=12, color=ACCENT_GREEN)
 
@@ -252,6 +229,7 @@ def main(page: ft.Page):
             bgcolor=BUBBLE_GRAY,
             padding=ft.padding.symmetric(horizontal=15, vertical=10),
             border_radius=15,
+            margin=ft.margin.only(right=50),
         )
         typing_row = ft.Row([typing_indicator], alignment=ft.MainAxisAlignment.START)
 
@@ -272,8 +250,7 @@ def main(page: ft.Page):
                         bgcolor=bg_color,
                         padding=ft.padding.symmetric(horizontal=15, vertical=10),
                         border_radius=ft.border_radius.only(
-                            top_left=15,
-                            top_right=15,
+                            top_left=15, top_right=15,
                             bottom_left=15 if is_user else 0,
                             bottom_right=0 if is_user else 15,
                         ),
@@ -283,7 +260,7 @@ def main(page: ft.Page):
                 alignment=ft.MainAxisAlignment.END if is_user else ft.MainAxisAlignment.START,
             )
 
-        # Send message (profile সহ)
+        # Send message
         async def send_message(e):
             user_text = (input_field.value or "").strip()
             if not user_text:
@@ -304,10 +281,8 @@ def main(page: ft.Page):
                             "message": user_text,
                             "user": {
                                 "name": state["name"],
-                                "location": state["location"],
                                 "age": state["age"],
-                                "education": state["education"],
-                                "interest": state["interest"],
+                                "gender": state["gender"],
                             },
                         },
                         headers={"Content-Type": "application/json"},
@@ -316,12 +291,11 @@ def main(page: ft.Page):
 
                     if response.status_code == 200:
                         data = response.json()
-                        bot_reply = data.get(
-                            "reply", data.get("message", "Response format unknown.")
-                        )
+                        bot_reply = data.get("reply", data.get("message", "Response format unknown."))
+                        set_online(True)
                     else:
                         bot_reply = f"Error: {response.status_code} - {response.text}"
-                    set_online(True)
+                        set_online(True)
 
             except Exception:
                 bot_reply = "দুঃখিত, সার্ভারের সাথে সংযোগ করা যাচ্ছে না। আবার চেষ্টা করুন।"
@@ -329,7 +303,7 @@ def main(page: ft.Page):
 
             if typing_row in chat_list.controls:
                 chat_list.controls.remove(typing_row)
-            chat_list.controls.append(create_message_bubble(str(bot_reply), False))
+            chat_list.controls.append(create_message_bubble(bot_reply, False))
             page.update()
 
         # Input bar
@@ -384,10 +358,8 @@ def main(page: ft.Page):
                     ft.Column(
                         [
                             ft.Text(
-                                state["partner"],
-                                size=18,
-                                weight=ft.FontWeight.BOLD,
-                                color=TEXT_WHITE,
+                                state["partner"], size=18,
+                                weight=ft.FontWeight.BOLD, color=TEXT_WHITE,
                             ),
                             status_label,
                         ],
@@ -400,7 +372,7 @@ def main(page: ft.Page):
             border=ft.border.only(bottom=ft.BorderSide(1, "#2A2A2A")),
         )
 
-        # Opening message
+        # Opening message from partner
         chat_list.controls.append(
             create_message_bubble(f"Hi {state['name']}! 👋", False)
         )
@@ -418,7 +390,7 @@ def main(page: ft.Page):
 
     # Start
     page.add(root)
-    show_form_screen()
+    show_info_screen()
 
 
 ft.run(main)
